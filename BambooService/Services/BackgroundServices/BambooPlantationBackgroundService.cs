@@ -3,26 +3,18 @@ using BambooService.Models;
 
 namespace BambooService.Services.BackgroundServices;
 
-public class BambooPlantationBackgroundService : BackgroundService
+public class BambooPlantationBackgroundService(IServiceProvider serviceProvider, ILogger<BambooPlantationBackgroundService> logger) : BackgroundService
 {
-    private readonly IServiceProvider _serviceProvider;
-    private readonly ILogger<BambooPlantationBackgroundService> _logger;
-
-    public BambooPlantationBackgroundService(IServiceProvider serviceProvider, ILogger<BambooPlantationBackgroundService> logger)
-    {
-        _serviceProvider = serviceProvider;
-        _logger = logger;
-    }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("BambooPlantationBackgroundService started");
+        logger.LogInformation("BambooPlantationBackgroundService started");
 
         while (!stoppingToken.IsCancellationRequested)
         {
             try
             {
-                using (var scope = _serviceProvider.CreateScope())
+                using (var scope = serviceProvider.CreateScope())
                 {
                     var dbContext = scope.ServiceProvider.GetRequiredService<BambooDbContext>();
                     await ProduceBambooAsync(dbContext);
@@ -30,14 +22,14 @@ public class BambooPlantationBackgroundService : BackgroundService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error in BambooPlantationBackgroundService");
+                logger.LogError(ex, "Error in BambooPlantationBackgroundService");
             }
 
             // Produce bamboo every minute (simulating growth)
             await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
         }
 
-        _logger.LogInformation("BambooPlantationBackgroundService stopped");
+        logger.LogInformation("BambooPlantationBackgroundService stopped");
     }
 
     private async Task ProduceBambooAsync(BambooDbContext dbContext)
@@ -67,6 +59,6 @@ public class BambooPlantationBackgroundService : BackgroundService
         }
 
         await dbContext.SaveChangesAsync();
-        _logger.LogInformation("Produced {Count} bamboo stalks", stalksPerMinute);
+        logger.LogInformation("Produced {Count} bamboo stalks", stalksPerMinute);
     }
 }
