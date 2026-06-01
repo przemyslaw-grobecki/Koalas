@@ -4,41 +4,32 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BambooService.Services;
 
-public class BambooService
+public class BambooService(BambooDbContext dbContext, ILogger<BambooService> logger)
 {
-    private readonly BambooDbContext _dbContext;
-    private readonly ILogger<BambooService> _logger;
-
-    public BambooService(BambooDbContext dbContext, ILogger<BambooService> logger)
-    {
-        _dbContext = dbContext;
-        _logger = logger;
-    }
-
     public async Task<List<Bamboo>> GetAllBambooAsync()
     {
-        _logger.LogInformation("Getting all bamboo plants");
-        return await _dbContext.Bamboos.ToListAsync();
+        logger.LogInformation("Getting all bamboo plants");
+        return await dbContext.Bamboos.ToListAsync();
     }
 
     public async Task<Bamboo?> GetBambooByIdAsync(int id)
     {
-        _logger.LogInformation("Getting bamboo with id: {BambooId}", id);
-        return await _dbContext.Bamboos.FindAsync(id);
+        logger.LogInformation("Getting bamboo with id: {BambooId}", id);
+        return await dbContext.Bamboos.FindAsync(id);
     }
 
     public async Task<Bamboo> CreateBambooAsync(Bamboo bamboo)
     {
-        _logger.LogInformation("Creating new bamboo: {BambooSpecies}", bamboo.Species);
-        _dbContext.Bamboos.Add(bamboo);
-        await _dbContext.SaveChangesAsync();
+        logger.LogInformation("Creating new bamboo: {BambooSpecies}", bamboo.Species);
+        dbContext.Bamboos.Add(bamboo);
+        await dbContext.SaveChangesAsync();
         return bamboo;
     }
 
     public async Task<Bamboo?> UpdateBambooAsync(int id, Bamboo bamboo)
     {
-        _logger.LogInformation("Updating bamboo with id: {BambooId}", id);
-        var existingBamboo = await _dbContext.Bamboos.FindAsync(id);
+        logger.LogInformation("Updating bamboo with id: {BambooId}", id);
+        var existingBamboo = await dbContext.Bamboos.FindAsync(id);
         if (existingBamboo == null)
             return null;
 
@@ -48,19 +39,19 @@ public class BambooService
         existingBamboo.HealthStatus = bamboo.HealthStatus;
         existingBamboo.PlantedDate = bamboo.PlantedDate;
 
-        await _dbContext.SaveChangesAsync();
+        await dbContext.SaveChangesAsync();
         return existingBamboo;
     }
 
     public async Task<bool> DeleteBambooAsync(int id)
     {
-        _logger.LogInformation("Deleting bamboo with id: {BambooId}", id);
-        var bamboo = await _dbContext.Bamboos.FindAsync(id);
+        logger.LogInformation("Deleting bamboo with id: {BambooId}", id);
+        var bamboo = await dbContext.Bamboos.FindAsync(id);
         if (bamboo == null)
             return false;
 
-        _dbContext.Bamboos.Remove(bamboo);
-        await _dbContext.SaveChangesAsync();
+        dbContext.Bamboos.Remove(bamboo);
+        await dbContext.SaveChangesAsync();
         return true;
     }
 }

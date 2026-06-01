@@ -14,11 +14,9 @@ public class BambooPlantationBackgroundService(IServiceProvider serviceProvider,
         {
             try
             {
-                using (var scope = serviceProvider.CreateScope())
-                {
-                    var dbContext = scope.ServiceProvider.GetRequiredService<BambooDbContext>();
-                    await ProduceBambooAsync(dbContext);
-                }
+                using var scope = serviceProvider.CreateScope();
+                var dbContext = scope.ServiceProvider.GetRequiredService<BambooDbContext>();
+                await ProduceBambooAsync(dbContext);
             }
             catch (Exception ex)
             {
