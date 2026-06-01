@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="BambooService/BambooService.csproj" />
+  <Project Path="BambooServiceApi/BambooServiceApi.csproj" />
+  <Project Path="KoalaServiceApi/KoalaServiceApi.csproj" />
+  <Project Path="KoalaService/KoalaService.csproj" />
+  <Project Path="ZooManagementService/ZooManagementService.csproj" />
+  <Project Path="Shared/Shared.csproj" />
+</Solution>
