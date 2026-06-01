@@ -55,40 +55,13 @@ try
     // Configure the HTTP request pipeline
     app.UseCors("AllowAll");
 
-    // Seed initial bamboo data
+    // Seed data on startup
     using (var scope = app.Services.CreateScope())
     {
         var db = scope.ServiceProvider.GetRequiredService<BambooDbContext>();
-        if (!db.Bamboos.Any())
-        {
-            Log.Information("Seeding initial bamboo plantation...");
-            var random = new Random(42); // Fixed seed for reproducibility
-            var bamboos = new List<BambooService.Models.Bamboo>();
-
-            for (int i = 0; i < 500; i++)
-            {
-                var heightCm = random.Next(50, 151); // 50-150 cm
-                var diameterCm = random.Next(3, 9); // 3-8 cm
-                var density = 700; // kg/m³
-                var volumeM3 = Math.PI * Math.Pow(diameterCm / 200.0, 2) * (heightCm / 100.0);
-                var weightKg = volumeM3 * density;
-
-                bamboos.Add(new BambooService.Models.Bamboo
-                {
-                    HeightCm = heightCm,
-                    DiameterCm = diameterCm,
-                    Location = $"Section-{(i / 50) + 1}",
-                    HealthStatus = "Healthy",
-                    WeightKg = weightKg,
-                    PlantedDate = DateTime.UtcNow.AddDays(-random.Next(30, 180))
-                });
-            }
-
-            db.Bamboos.AddRange(bamboos);
-            await db.SaveChangesAsync();
-            var totalWeight = bamboos.Sum(b => b.WeightKg);
-            Log.Information("Seeded {BambooCount} bamboo stalks with total weight {TotalWeight}kg", bamboos.Count, Math.Round(totalWeight, 2));
-        }
+        Log.Information("Seeding initial bamboo plantation...");
+        await db.SeedBambooAsync();
+        Log.Information("Bamboo plantation seeded");
     }
 
     // Initialize MQTT connection on startup

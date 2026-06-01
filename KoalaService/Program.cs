@@ -58,35 +58,13 @@ try
     // Configure the HTTP request pipeline
     app.UseCors("AllowAll");
 
-    // Seed initial koala data
+    // Seed data on startup
     using (var scope = app.Services.CreateScope())
     {
         var db = scope.ServiceProvider.GetRequiredService<KoalaDbContext>();
-        if (!db.Koalas.Any())
-        {
-            Log.Information("Seeding initial koala population...");
-            var koalas = new List<Tellemetry.Models.Koala>
-            {
-                new() { Name = "Koa", AgeYears = 5, AgeDays = 0, Gender = 'M', HungerLevel = 1, Status = "Healthy", IsAlive = true },
-                new() { Name = "Bea", AgeYears = 4, AgeDays = 0, Gender = 'F', HungerLevel = 0, Status = "Healthy", IsAlive = true },
-                new() { Name = "Leo", AgeYears = 3, AgeDays = 0, Gender = 'M', HungerLevel = 2, Status = "Hungry", IsAlive = true },
-                new() { Name = "Luna", AgeYears = 2, AgeDays = 0, Gender = 'F', HungerLevel = 1, Status = "Healthy", IsAlive = true },
-                new() { Name = "Milo", AgeYears = 6, AgeDays = 0, Gender = 'M', HungerLevel = 0, Status = "Healthy", IsAlive = true },
-                new() { Name = "Gigi", AgeYears = 1, AgeDays = 0, Gender = 'F', HungerLevel = 3, Status = "Starving", IsAlive = true },
-                new() { Name = "Max", AgeYears = 8, AgeDays = 0, Gender = 'M', HungerLevel = 1, Status = "Healthy", IsAlive = true },
-                new() { Name = "Nala", AgeYears = 3, AgeDays = 0, Gender = 'F', HungerLevel = 2, Status = "Hungry", IsAlive = true },
-                new() { Name = "Cody", AgeYears = 4, AgeDays = 0, Gender = 'M', HungerLevel = 1, Status = "Healthy", IsAlive = true },
-                new() { Name = "Ellie", AgeYears = 2, AgeDays = 0, Gender = 'F', HungerLevel = 0, Status = "Healthy", IsAlive = true },
-                new() { Name = "Bash", AgeYears = 5, AgeDays = 0, Gender = 'M', HungerLevel = 2, Status = "Hungry", IsAlive = true },
-                new() { Name = "Penny", AgeYears = 3, AgeDays = 0, Gender = 'F', HungerLevel = 1, Status = "Healthy", IsAlive = true },
-                new() { Name = "Oscar", AgeYears = 1, AgeDays = 0, Gender = 'M', HungerLevel = 3, Status = "Starving", IsAlive = true },
-                new() { Name = "Zoe", AgeYears = 6, AgeDays = 0, Gender = 'F', HungerLevel = 0, Status = "Healthy", IsAlive = true },
-                new() { Name = "Tucker", AgeYears = 4, AgeDays = 0, Gender = 'M', HungerLevel = 1, Status = "Healthy", IsAlive = true }
-            };
-            db.Koalas.AddRange(koalas);
-            await db.SaveChangesAsync();
-            Log.Information("Seeded {KoalaCount} koalas", koalas.Count);
-        }
+        Log.Information("Seeding initial koala population...");
+        await db.SeedKoalasAsync();
+        Log.Information("Koala population seeded");
     }
 
     // Initialize MQTT connection on startup
