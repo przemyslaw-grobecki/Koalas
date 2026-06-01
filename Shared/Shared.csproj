@@ -10,6 +10,7 @@
     <PackageReference Include="MQTTnet" Version="4.3.7.953" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" Version="10.0.0" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.0" />
+    <PackageReference Include="Serilog" Version="4.0.0" />
   </ItemGroup>
 
 </Project>

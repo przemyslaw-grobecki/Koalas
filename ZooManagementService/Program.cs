@@ -1,132 +1,160 @@
 using KoalaServiceApi.Clients;
 using BambooServiceApi.Clients;
 using Shared.Services;
+using Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add HTTP clients for communication with microservices
-builder.Services.AddHttpClient<IKoalaServiceClient, KoalaServiceClient>(client =>
+// Configure Serilog
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.Information()
+    .WriteTo.Console()
+    .WriteTo.File(
+        "logs/zoo-management-service-.txt",
+        rollingInterval: RollingInterval.Day,
+        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {Message:lj}{NewLine}{Exception}")
+    .Enrich.FromLogContext()
+    .Enrich.WithProperty("Service", "ZooManagementService")
+    .CreateLogger();
+
+try
 {
-    client.BaseAddress = new Uri(builder.Configuration["Services:KoalaService:Url"] ?? "https://localhost:5001");
-});
+    builder.Host.UseSerilog();
 
-builder.Services.AddHttpClient<IBambooServiceClient, BambooServiceClient>(client =>
-{
-    client.BaseAddress = new Uri(builder.Configuration["Services:BambooService:Url"] ?? "https://localhost:5002");
-});
-
-// Add MQTT service
-builder.Services.AddSingleton<IMqttService>(sp =>
-    new MqttService(sp.GetRequiredService<ILogger<MqttService>>(), 
-                    sp.GetRequiredService<IConfiguration>(),
-                    "ZooManagementService"));
-
-// Add CORS
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("AllowAll",
-        builder =>
-        {
-            builder.AllowAnyOrigin()
-                   .AllowAnyMethod()
-                   .AllowAnyHeader();
-        });
-});
-
-var app = builder.Build();
-
-app.UseCors("AllowAll");
-
-app.MapGet("/", () => "ZooManagementService - Central Zoo Management API");
-app.MapGet("/health", () => Results.Ok("ZooManagementService is running"));
-
-// Endpoint to feed koalas with bamboo
-app.MapPost("/api/feed-koalas", async (
-    IKoalaServiceClient koalaClient,
-    IBambooServiceClient bambooClient,
-    ILogger<Program> logger,
-    FeedKoalasRequest request) =>
-{
-    logger.LogInformation("Received request to feed {KoalaCount} koalas with {BambooWeight}kg of bamboo", 
-        request.KoalaIds?.Count ?? 0, request.BambooWeightKg);
-
-    if (request.BambooWeightKg <= 0)
-        return Results.BadRequest("Bamboo weight must be greater than 0");
-
-    // Check bamboo availability
-    var bambooStats = await bambooClient.GetAllBambooAsync();
-    if (bambooStats.Count == 0)
-        return Results.BadRequest("No bamboo available in the plantation");
-
-    // Calculate total available bamboo weight
-    double totalBambooWeight = bambooStats.Sum(b => b.WeightKg);
-    
-    if (totalBambooWeight < request.BambooWeightKg)
+    // Add HTTP clients for communication with microservices
+    builder.Services.AddHttpClient<IKoalaServiceClient, KoalaServiceClient>(client =>
     {
-        logger.LogWarning("Insufficient bamboo. Available: {Available}kg, Requested: {Requested}kg",
-            totalBambooWeight, request.BambooWeightKg);
-        return Results.BadRequest($"Insufficient bamboo. Available: {totalBambooWeight}kg, Requested: {request.BambooWeightKg}kg");
-    }
+        client.BaseAddress = new Uri(builder.Configuration["Services:KoalaService:Url"] ?? "https://localhost:5001");
+    });
 
-    // Consume bamboo
-    try
+    builder.Services.AddHttpClient<IBambooServiceClient, BambooServiceClient>(client =>
     {
-        // This would need an endpoint on BambooService
-        logger.LogInformation("Successfully fed {KoalaCount} koalas", request.KoalaIds?.Count ?? 0);
-        
-        return Results.Ok(new
-        {
-            message = "Koalas fed successfully",
-            koalasCount = request.KoalaIds?.Count ?? 0,
-            bambooUsedKg = request.BambooWeightKg,
-            remainingBambooKg = totalBambooWeight - request.BambooWeightKg
-        });
-    }
-    catch (Exception ex)
-    {
-        logger.LogError(ex, "Error feeding koalas");
-        return Results.StatusCode(500);
-    }
-});
+        client.BaseAddress = new Uri(builder.Configuration["Services:BambooService:Url"] ?? "https://localhost:5002");
+    });
 
-// Get zoo statistics
-app.MapGet("/api/zoo-stats", async (
-    IKoalaServiceClient koalaClient,
-    IBambooServiceClient bambooClient) =>
-{
-    try
-    {
-        var koalas = await koalaClient.GetAllKoalasAsync();
-        var bamboo = await bambooClient.GetAllBambooAsync();
+    // Add MQTT service
+    builder.Services.AddSingleton<IMqttService>(sp =>
+        new MqttService(sp.GetRequiredService<ILogger<MqttService>>(),
+                        sp.GetRequiredService<IConfiguration>(),
+                        "ZooManagementService"));
 
-        var stats = new
-        {
-            koalas = new
+    // Add CORS
+    builder.Services.AddCors(options =>
+    {
+        options.AddPolicy("AllowAll",
+            builder =>
             {
-                totalCount = koalas.Count,
-                healthyCount = koalas.Count(k => k.Status == "Healthy"),
-                hungryCount = koalas.Count(k => k.Status == "Hungry"),
-                starvingCount = koalas.Count(k => k.Status == "Starving"),
-                averageAge = koalas.Average(k => k.AgeYears),
-                averageHunger = koalas.Average(k => k.HungerLevel)
-            },
-            bamboo = new
-            {
-                totalStalks = bamboo.Count,
-                totalWeightKg = bamboo.Sum(b => b.WeightKg),
-                averageWeightPerStalk = bamboo.Count > 0 ? bamboo.Average(b => b.WeightKg) : 0
-            }
-        };
+                builder.AllowAnyOrigin()
+                       .AllowAnyMethod()
+                       .AllowAnyHeader();
+            });
+    });
 
-        return Results.Ok(stats);
-    }
-    catch
+    var app = builder.Build();
+
+    app.UseCors("AllowAll");
+
+    Log.Information("ZooManagementService starting...");
+
+    app.MapGet("/", () => "ZooManagementService - Central Zoo Management API");
+    app.MapGet("/health", () => Results.Ok("ZooManagementService is running"));
+
+    // Endpoint to feed koalas with bamboo
+    app.MapPost("/api/feed-koalas", async (
+        IKoalaServiceClient koalaClient,
+        IBambooServiceClient bambooClient,
+        ILogger<Program> logger,
+        FeedKoalasRequest request) =>
     {
-        return Results.StatusCode(500);
-    }
-});
+        logger.LogInformation("Received request to feed {KoalaCount} koalas with {BambooWeight}kg of bamboo",
+            request.KoalaIds?.Count ?? 0, request.BambooWeightKg);
 
-app.Run();
+        if (request.BambooWeightKg <= 0)
+            return Results.BadRequest("Bamboo weight must be greater than 0");
+
+        // Check bamboo availability
+        var bambooStats = await bambooClient.GetAllBambooAsync();
+        if (bambooStats.Count == 0)
+            return Results.BadRequest("No bamboo available in the plantation");
+
+        // Calculate total available bamboo weight
+        double totalBambooWeight = bambooStats.Sum(b => b.WeightKg);
+
+        if (totalBambooWeight < request.BambooWeightKg)
+        {
+            logger.LogWarning("Insufficient bamboo. Available: {Available}kg, Requested: {Requested}kg",
+                totalBambooWeight, request.BambooWeightKg);
+            return Results.BadRequest($"Insufficient bamboo. Available: {totalBambooWeight}kg, Requested: {request.BambooWeightKg}kg");
+        }
+
+        // Consume bamboo
+        try
+        {
+            // This would need an endpoint on BambooService
+            logger.LogInformation("Successfully fed {KoalaCount} koalas", request.KoalaIds?.Count ?? 0);
+
+            return Results.Ok(new
+            {
+                message = "Koalas fed successfully",
+                koalasCount = request.KoalaIds?.Count ?? 0,
+                bambooUsedKg = request.BambooWeightKg,
+                remainingBambooKg = totalBambooWeight - request.BambooWeightKg
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error feeding koalas");
+            return Results.StatusCode(500);
+        }
+    });
+
+    // Get zoo statistics
+    app.MapGet("/api/zoo-stats", async (
+        IKoalaServiceClient koalaClient,
+        IBambooServiceClient bambooClient) =>
+    {
+        try
+        {
+            var koalas = await koalaClient.GetAllKoalasAsync();
+            var bamboo = await bambooClient.GetAllBambooAsync();
+
+            var stats = new
+            {
+                koalas = new
+                {
+                    totalCount = koalas.Count,
+                    healthyCount = koalas.Count(k => k.Status == "Healthy"),
+                    hungryCount = koalas.Count(k => k.Status == "Hungry"),
+                    starvingCount = koalas.Count(k => k.Status == "Starving"),
+                    averageAge = koalas.Average(k => k.AgeYears),
+                    averageHunger = koalas.Average(k => k.HungerLevel)
+                },
+                bamboo = new
+                {
+                    totalStalks = bamboo.Count,
+                    totalWeightKg = bamboo.Sum(b => b.WeightKg),
+                    averageWeightPerStalk = bamboo.Count > 0 ? bamboo.Average(b => b.WeightKg) : 0
+                }
+            };
+
+            return Results.Ok(stats);
+        }
+        catch
+        {
+            return Results.StatusCode(500);
+        }
+    });
+
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "ZooManagementService terminated unexpectedly");
+}
+finally
+{
+    await Log.CloseAndFlushAsync();
+}
 
 public record FeedKoalasRequest(
     List<int>? KoalaIds,

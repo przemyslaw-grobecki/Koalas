@@ -1,6 +1,5 @@
 using BambooService.Data;
 using BambooService.Models;
-using Microsoft.EntityFrameworkCore;
 
 namespace BambooService.Services.BackgroundServices;
 
