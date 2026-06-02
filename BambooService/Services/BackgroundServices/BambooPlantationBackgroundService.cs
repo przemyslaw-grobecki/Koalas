@@ -23,8 +23,9 @@ public class BambooPlantationBackgroundService(IServiceProvider serviceProvider,
                 logger.LogError(ex, "Error in BambooPlantationBackgroundService");
             }
 
-            // Produce bamboo every minute (simulating growth)
-            await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+            // Produce bamboo roughly every minute (±20s) to desynchronize from other services
+            var delaySeconds = 40 + Random.Shared.Next(40); // 40-79 seconds
+            await Task.Delay(TimeSpan.FromSeconds(delaySeconds), stoppingToken);
         }
 
         logger.LogInformation("BambooPlantationBackgroundService stopped");

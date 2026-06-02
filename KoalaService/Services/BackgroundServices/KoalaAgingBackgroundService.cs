@@ -33,8 +33,9 @@ public class KoalaAgingBackgroundService : BackgroundService
                 _logger.LogError(ex, "Error in KoalaAgingBackgroundService");
             }
 
-            // Age koalas every day (for demo, checking every minute)
-            await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+            // Age koalas roughly every minute (±20s) to desynchronize from other services
+            var delaySeconds = 40 + Random.Shared.Next(40); // 40-79 seconds
+            await Task.Delay(TimeSpan.FromSeconds(delaySeconds), stoppingToken);
         }
 
         _logger.LogInformation("KoalaAgingBackgroundService stopped");

@@ -35,7 +35,9 @@ public class KoalaBreedingBackgroundService : BackgroundService
                 _logger.LogError(ex, "Error in KoalaBreedingBackgroundService");
             }
 
-            await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+            // Breed koalas roughly every minute (±20s) to desynchronize from other services
+            var delaySeconds = 40 + Random.Shared.Next(40); // 40-79 seconds
+            await Task.Delay(TimeSpan.FromSeconds(delaySeconds), stoppingToken);
         }
 
         _logger.LogInformation("KoalaBreedingBackgroundService stopped");

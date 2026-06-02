@@ -33,8 +33,9 @@ public class KoalaStarvingBackgroundService : BackgroundService
                 _logger.LogError(ex, "Error in KoalaStarvingBackgroundService");
             }
 
-            // Increase hunger every minute
-            await Task.Delay(TimeSpan.FromMinutes(1), stoppingToken);
+            // Increase hunger roughly every minute (±20s) to desynchronize from other services
+            var delaySeconds = 40 + Random.Shared.Next(40); // 40-79 seconds
+            await Task.Delay(TimeSpan.FromSeconds(delaySeconds), stoppingToken);
         }
 
         _logger.LogInformation("KoalaStarvingBackgroundService stopped");
