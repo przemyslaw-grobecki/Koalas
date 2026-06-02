@@ -28,6 +28,7 @@ try
         options.UseInMemoryDatabase("BambooDb"));
 
     builder.Services.AddScoped<BambooService.Services.BambooService>();
+    builder.Services.AddScoped<IBambooController, BambooController>();
     builder.Services.AddSingleton<IMqttService>(sp =>
         new MqttService(sp.GetRequiredService<ILogger<MqttService>>(),
                         sp.GetRequiredService<IConfiguration>(),
@@ -73,77 +74,47 @@ try
     app.MapGet("/", () => "BambooService - Zoo Management API");
     app.MapGet("/health", () => Results.Ok("BambooService is running"));
 
-    // Endpoints for managing bamboo
-    app.MapGet("/api/bamboo", async (BambooDbContext db) =>
-        await db.Bamboos.Where(b => b.HealthStatus == "Healthy").ToListAsync());
-
-    app.MapGet("/api/bamboo/{id}", async (int id, BambooDbContext db) =>
-        await db.Bamboos.FirstOrDefaultAsync(b => b.Id == id)
-            is var bamboo
-            ? Results.Ok(bamboo)
-            : Results.NotFound());
-
-    app.MapGet("/api/bamboo/total-weight", async (BambooDbContext db) =>
+    // Endpoints for managing bamboo - all using IBambooController
+    app.MapGet("/api/bamboo", async (IBambooController controller) =>
     {
-        var totalWeight = await db.Bamboos
-            .Where(b => b.HealthStatus == "Healthy")
-            .SumAsync(b => b.WeightKg);
-        var count = await db.Bamboos.Where(b => b.HealthStatus == "Healthy").CountAsync();
-        return Results.Ok(new { totalWeightKg = totalWeight, stalksCount = count });
+        var bamboo = await controller.GetAllHealthyBambooAsync();
+        return Results.Ok(bamboo);
     });
 
-    app.MapPost("/api/bamboo/consume/{weight}", async (double weight, BambooDbContext db) =>
+    app.MapGet("/api/bamboo/all", async (IBambooController controller) =>
     {
-        var totalWeight = await db.Bamboos
-            .Where(b => b.HealthStatus == "Healthy")
-            .SumAsync(b => b.WeightKg);
+        var bamboo = await controller.GetAllBambooAsync();
+        return Results.Ok(bamboo);
+    });
 
-        if (totalWeight < weight)
-            return Results.BadRequest($"Not enough bamboo. Available: {totalWeight}kg, Requested: {weight}kg");
+    app.MapGet("/api/bamboo/{id}", async (int id, IBambooController controller) =>
+    {
+        var bamboo = await controller.GetBambooByIdAsync(id);
+        return bamboo is not null ? Results.Ok(bamboo) : Results.NotFound();
+    });
 
-        // Consume bamboo starting from oldest
-        var bambooToConsume = await db.Bamboos
-            .Where(b => b.HealthStatus == "Healthy")
-            .OrderBy(b => b.PlantedDate)
-            .ToListAsync();
+    app.MapGet("/api/bamboo/total-weight", async (IBambooController controller) =>
+    {
+        var result = await controller.GetTotalWeightAsync();
+        return Results.Ok(result);
+    });
 
-        double remainingWeight = weight;
-        var consumed = new List<int>();
-
-        foreach (var bamboo in bambooToConsume)
+    app.MapPost("/api/bamboo/consume/{weight}", async (double weight, IBambooController controller) =>
+    {
+        try
         {
-            if (remainingWeight <= 0)
-                break;
-
-            if (bamboo.WeightKg <= remainingWeight)
-            {
-                remainingWeight -= bamboo.WeightKg;
-                db.Bamboos.Remove(bamboo);
-                consumed.Add(bamboo.Id);
-            }
-            else
-            {
-                // Partial consumption
-                bamboo.WeightKg -= remainingWeight;
-                remainingWeight = 0;
-            }
+            var result = await controller.ConsumeBambooAsync(weight);
+            return Results.Ok(result);
         }
-
-        await db.SaveChangesAsync();
-        return Results.Ok(new { consumedKg = weight, consumedBambooIds = consumed });
+        catch (InvalidOperationException ex)
+        {
+            return Results.BadRequest(ex.Message);
+        }
     });
 
-    app.MapGet("/api/bamboo/stats", async (BambooDbContext db) =>
+    app.MapGet("/api/bamboo/stats", async (IBambooController controller) =>
     {
-        var stats = new
-        {
-            totalStalkCount = await db.Bamboos.CountAsync(),
-            healthyStalkCount = await db.Bamboos.CountAsync(b => b.HealthStatus == "Healthy"),
-            totalWeightKg = await db.Bamboos.Where(b => b.HealthStatus == "Healthy").SumAsync(b => b.WeightKg),
-            averageWeightPerStalk = await db.Bamboos.Where(b => b.HealthStatus == "Healthy").AverageAsync(b => b.WeightKg),
-            averageHeightCm = await db.Bamboos.Where(b => b.HealthStatus == "Healthy").AverageAsync(b => b.HeightCm),
-            averageDiameterCm = await db.Bamboos.Where(b => b.HealthStatus == "Healthy").AverageAsync(b => b.DiameterCm)
-        };
+        var stats = await controller.GetStatsAsync();
         return Results.Ok(stats);
     });
 
