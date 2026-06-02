@@ -8,7 +8,7 @@ public class BambooDbContextFactory : IDesignTimeDbContextFactory<BambooDbContex
     public BambooDbContext CreateDbContext(string[] args)
     {
         var optionsBuilder = new DbContextOptionsBuilder<BambooDbContext>();
-        optionsBuilder.UseInMemoryDatabase("BambooDb");
+        optionsBuilder.UseNpgsql("Host=localhost;Port=5432;Database=BambooDb;Username=postgres;Password=admin");
 
         return new BambooDbContext(optionsBuilder.Options);
     }

@@ -25,7 +25,7 @@ try
 
     // Add services to the container
     builder.Services.AddDbContext<KoalaDbContext>(options =>
-        options.UseInMemoryDatabase("KoalaDb"));
+        options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
     builder.Services.AddScoped<KoalaService>();
     builder.Services.AddScoped<IKoalaController, KoalaController>();
@@ -63,6 +63,7 @@ try
     using (var scope = app.Services.CreateScope())
     {
         var db = scope.ServiceProvider.GetRequiredService<KoalaDbContext>();
+        await db.Database.EnsureCreatedAsync();
         Log.Information("Seeding initial koala population...");
         await db.SeedKoalasAsync();
         Log.Information("Koala population seeded");

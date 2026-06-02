@@ -25,7 +25,7 @@ try
 
     // Add services to the container
     builder.Services.AddDbContext<BambooDbContext>(options =>
-        options.UseInMemoryDatabase("BambooDb"));
+        options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
     builder.Services.AddScoped<BambooService.Services.BambooService>();
     builder.Services.AddScoped<IBambooController, BambooController>();
@@ -60,6 +60,7 @@ try
     using (var scope = app.Services.CreateScope())
     {
         var db = scope.ServiceProvider.GetRequiredService<BambooDbContext>();
+        await db.Database.EnsureCreatedAsync();
         Log.Information("Seeding initial bamboo plantation...");
         await db.SeedBambooAsync();
         Log.Information("Bamboo plantation seeded");
