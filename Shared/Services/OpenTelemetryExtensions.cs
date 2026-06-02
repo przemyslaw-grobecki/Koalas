@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using OpenTelemetry;
 using OpenTelemetry.Metrics;
@@ -8,8 +9,10 @@ namespace Shared.Services;
 
 public static class OpenTelemetryExtensions
 {
-    public static IServiceCollection AddZooOpenTelemetry(this IServiceCollection services, string serviceName)
+    public static IServiceCollection AddZooOpenTelemetry(this IServiceCollection services, string serviceName, IConfiguration configuration)
     {
+        var otlpEndpoint = configuration["Otlp:Endpoint"] ?? "http://localhost:4317";
+
         services.AddOpenTelemetry()
             .ConfigureResource(resource => resource
                 .AddService(serviceName))
@@ -17,11 +20,17 @@ public static class OpenTelemetryExtensions
                 .AddAspNetCoreInstrumentation()
                 .AddEntityFrameworkCoreInstrumentation()
                 .AddConsoleExporter()
-                .AddOtlpExporter())
+                .AddOtlpExporter(options =>
+                {
+                    options.Endpoint = new Uri(otlpEndpoint);
+                }))
             .WithMetrics(metrics => metrics
                 .AddAspNetCoreInstrumentation()
                 .AddConsoleExporter()
-                .AddOtlpExporter());
+                .AddOtlpExporter(options =>
+                {
+                    options.Endpoint = new Uri(otlpEndpoint);
+                }));
 
         return services;
     }

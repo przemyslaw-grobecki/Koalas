@@ -1,0 +1,134 @@
+services:
+  # ==================== Infrastructure ====================
+
+  # PostgreSQL database
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./certs/postgres.crt:/var/lib/postgresql/server.crt:ro
+      - ./certs/postgres.key:/var/lib/postgresql/server.key:ro
+    command: >
+      postgres
+        -c ssl=on
+        -c ssl_cert_file=/var/lib/postgresql/server.crt
+        -c ssl_key_file=/var/lib/postgresql/server.key
+        -c ssl_ca_file=/var/lib/postgresql/server.crt
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - zoo-network
+
+  # Mosquitto MQTT broker
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: mosquitto
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./monitoring/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    networks:
+      - zoo-network
+
+  # ==================== Application Services ====================
+
+  bambooservice:
+    build:
+      context: .
+      dockerfile: BambooService/Dockerfile
+    container_name: bambooservice
+    ports:
+      - "5010:8080"
+      - "7028:8443"
+    environment:
+      - ASPNETCORE_URLS=https://+:8443;http://+:8080
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/certs/bambooservice.pfx
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=zoo1234
+      - ASPNETCORE_ENVIRONMENT=Docker
+    volumes:
+      - ./certs:/certs:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - zoo-network
+
+  koalaservice:
+    build:
+      context: .
+      dockerfile: KoalaService/Dockerfile
+    container_name: koalaservice
+    ports:
+      - "5230:8080"
+      - "7206:8443"
+    environment:
+      - ASPNETCORE_URLS=https://+:8443;http://+:8080
+      - ASPNETCORE_Kestrel__Certificates__Default__Path=/certs/koalaservice.pfx
+      - ASPNETCORE_Kestrel__Certificates__Default__Password=zoo1234
+      - ASPNETCORE_ENVIRONMENT=Docker
+    volumes:
+      - ./certs:/certs:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - zoo-network
+
+  # ==================== Monitoring ====================
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Viewer
+    volumes:
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - tempo
+    networks:
+      - zoo-network
+
+  tempo:
+    image: grafana/tempo:latest
+    container_name: tempo
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./monitoring/tempo.yaml:/etc/tempo.yaml
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "3200:3200"
+    networks:
+      - zoo-network
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - zoo-network
+
+volumes:
+  postgres_data:
+
+networks:
+  zoo-network:
+    driver: bridge

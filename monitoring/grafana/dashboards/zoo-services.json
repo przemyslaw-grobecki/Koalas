@@ -1,0 +1,30 @@
+{
+  "uid": "zoo-services-traces",
+  "title": "Zoo Management - Services",
+  "tags": ["zoo", "traces"],
+  "timezone": "browser",
+  "panels": [
+    {
+      "title": "Service Map",
+      "type": "traces",
+      "gridPos": { "h": 12, "w": 24, "x": 0, "y": 0 },
+      "datasource": { "type": "tempo", "uid": "tempo" },
+      "options": {}
+    },
+    {
+      "title": "Recent Traces",
+      "type": "table",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 12 },
+      "datasource": { "type": "tempo", "uid": "tempo" },
+      "targets": [
+        {
+          "datasource": { "type": "tempo", "uid": "tempo" },
+          "queryType": "traceqlSearch",
+          "limit": 20,
+          "filters": []
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 39
+}

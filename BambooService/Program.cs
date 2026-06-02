@@ -53,7 +53,7 @@ try
     });
 
     builder.Services.AddLogging();
-    builder.Services.AddZooOpenTelemetry("BambooService");
+    builder.Services.AddZooOpenTelemetry("BambooService", builder.Configuration);
 
     var app = builder.Build();
 
