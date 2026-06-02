@@ -56,6 +56,7 @@ try
     });
 
     builder.Services.AddLogging();
+    builder.Services.AddZooOpenTelemetry("KoalaService");
 
     var app = builder.Build();
 
