@@ -68,9 +68,16 @@ try
         Log.Information("Koala population seeded");
     }
 
-    // Initialize MQTT connection on startup
-    var mqttService = app.Services.GetRequiredService<IMqttService>();
-    await mqttService.ConnectAsync();
+    // Initialize MQTT connection on startup (non-fatal if broker unavailable)
+    try
+    {
+        var mqttService = app.Services.GetRequiredService<IMqttService>();
+        await mqttService.ConnectAsync();
+    }
+    catch (Exception ex)
+    {
+        Log.Warning(ex, "Could not connect to MQTT broker. Continuing without MQTT.");
+    }
 
     Log.Information("KoalaService starting...");
 
