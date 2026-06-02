@@ -28,10 +28,5 @@ public class BambooDbContext : DbContext
             .Property(b => b.Location)
             .IsRequired()
             .HasMaxLength(100);
-
-        modelBuilder.Entity<Bamboo>()
-            .Property(b => b.HealthStatus)
-            .IsRequired()
-            .HasMaxLength(50);
     }
 }

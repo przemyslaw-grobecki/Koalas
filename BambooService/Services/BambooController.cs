@@ -16,12 +16,6 @@ public class BambooController(BambooService bambooService, ILogger<BambooControl
         return await bambooService.GetBambooByIdAsync(id);
     }
 
-    public async Task<List<Bamboo>> GetAllHealthyBambooAsync()
-    {
-        logger.LogInformation("Getting all healthy bamboo via controller");
-        return await bambooService.GetAllHealthyBambooAsync();
-    }
-
     public async Task<object> GetTotalWeightAsync()
     {
         logger.LogInformation("Getting total bamboo weight via controller");

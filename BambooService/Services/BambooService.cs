@@ -36,7 +36,6 @@ public class BambooService(BambooDbContext dbContext, ILogger<BambooService> log
         existingBamboo.Species = bamboo.Species;
         existingBamboo.HeightCm = bamboo.HeightCm;
         existingBamboo.Location = bamboo.Location;
-        existingBamboo.HealthStatus = bamboo.HealthStatus;
         existingBamboo.PlantedDate = bamboo.PlantedDate;
 
         await dbContext.SaveChangesAsync();
@@ -55,38 +54,23 @@ public class BambooService(BambooDbContext dbContext, ILogger<BambooService> log
         return true;
     }
 
-    public async Task<List<Bamboo>> GetAllHealthyBambooAsync()
-    {
-        logger.LogInformation("Getting all healthy bamboo plants");
-        return await dbContext.Bamboos
-            .Where(b => b.HealthStatus == "Healthy")
-            .ToListAsync();
-    }
-
     public async Task<object> GetTotalWeightAsync()
     {
         logger.LogInformation("Getting total bamboo weight");
-        var totalWeight = await dbContext.Bamboos
-            .Where(b => b.HealthStatus == "Healthy")
-            .SumAsync(b => b.WeightKg);
-        var count = await dbContext.Bamboos
-            .Where(b => b.HealthStatus == "Healthy")
-            .CountAsync();
+        var totalWeight = await dbContext.Bamboos.SumAsync(b => b.WeightKg);
+        var count = await dbContext.Bamboos.CountAsync();
         return new { totalWeightKg = totalWeight, stalksCount = count };
     }
 
     public async Task<object> ConsumeBambooAsync(double weight)
     {
         logger.LogInformation("Consuming {Weight}kg of bamboo", weight);
-        var totalWeight = await dbContext.Bamboos
-            .Where(b => b.HealthStatus == "Healthy")
-            .SumAsync(b => b.WeightKg);
+        var totalWeight = await dbContext.Bamboos.SumAsync(b => b.WeightKg);
 
         if (totalWeight < weight)
             throw new InvalidOperationException($"Not enough bamboo. Available: {totalWeight}kg, Requested: {weight}kg");
 
         var bambooToConsume = await dbContext.Bamboos
-            .Where(b => b.HealthStatus == "Healthy")
             .OrderBy(b => b.PlantedDate)
             .ToListAsync();
 
@@ -121,11 +105,10 @@ public class BambooService(BambooDbContext dbContext, ILogger<BambooService> log
         var stats = new
         {
             totalStalkCount = await dbContext.Bamboos.CountAsync(),
-            healthyStalkCount = await dbContext.Bamboos.CountAsync(b => b.HealthStatus == "Healthy"),
-            totalWeightKg = await dbContext.Bamboos.Where(b => b.HealthStatus == "Healthy").SumAsync(b => b.WeightKg),
-            averageWeightPerStalk = await dbContext.Bamboos.Where(b => b.HealthStatus == "Healthy").AverageAsync(b => b.WeightKg),
-            averageHeightCm = await dbContext.Bamboos.Where(b => b.HealthStatus == "Healthy").AverageAsync(b => b.HeightCm),
-            averageDiameterCm = await dbContext.Bamboos.Where(b => b.HealthStatus == "Healthy").AverageAsync(b => b.DiameterCm)
+            totalWeightKg = await dbContext.Bamboos.SumAsync(b => b.WeightKg),
+            averageWeightPerStalk = await dbContext.Bamboos.AverageAsync(b => b.WeightKg),
+            averageHeightCm = await dbContext.Bamboos.AverageAsync(b => b.HeightCm),
+            averageDiameterCm = await dbContext.Bamboos.AverageAsync(b => b.DiameterCm)
         };
         return stats;
     }

@@ -26,7 +26,6 @@ public static class SeedDataExtension
                 HeightCm = heightCm,
                 DiameterCm = diameterCm,
                 Location = $"Section-{(i / 50) + 1}",
-                HealthStatus = "Healthy",
                 WeightKg = weightKg,
                 PlantedDate = DateTime.UtcNow.AddDays(-random.Next(30, 180))
             });

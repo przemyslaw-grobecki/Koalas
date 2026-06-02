@@ -7,7 +7,6 @@ public class Bamboo
     public int HeightCm { get; set; }
     public int DiameterCm { get; set; } // Cylinder diameter
     public string Location { get; set; } = string.Empty;
-    public string HealthStatus { get; set; } = "Healthy";
     public double WeightKg { get; set; } // Calculated from cylinder volume
     public DateTime PlantedDate { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

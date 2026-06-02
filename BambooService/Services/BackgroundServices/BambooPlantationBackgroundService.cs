@@ -46,7 +46,6 @@ public class BambooPlantationBackgroundService(IServiceProvider serviceProvider,
                 HeightCm = Random.Shared.Next(50, 101), // 50-100cm
                 DiameterCm = Random.Shared.Next(3, 9), // 3-8cm
                 Location = "Main Plantation",
-                HealthStatus = "Healthy",
                 PlantedDate = DateTime.UtcNow.AddDays(-Random.Shared.Next(1, 365)),
                 CreatedAt = DateTime.UtcNow
             };

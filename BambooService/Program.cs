@@ -77,12 +77,6 @@ try
     // Endpoints for managing bamboo - all using IBambooController
     app.MapGet("/api/bamboo", async (IBambooController controller) =>
     {
-        var bamboo = await controller.GetAllHealthyBambooAsync();
-        return Results.Ok(bamboo);
-    });
-
-    app.MapGet("/api/bamboo/all", async (IBambooController controller) =>
-    {
         var bamboo = await controller.GetAllBambooAsync();
         return Results.Ok(bamboo);
     });
