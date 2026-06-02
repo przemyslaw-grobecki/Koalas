@@ -1,5 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
+using Shared.Models;
 
 namespace BambooService.Data;
 
@@ -7,9 +10,17 @@ public class BambooDbContextFactory : IDesignTimeDbContextFactory<BambooDbContex
 {
     public BambooDbContext CreateDbContext(string[] args)
     {
-        var optionsBuilder = new DbContextOptionsBuilder<BambooDbContext>();
-        optionsBuilder.UseNpgsql("Host=localhost;Port=5432;Database=BambooDb;Username=postgres;Password=admin");
+        var configuration = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json")
+            .Build();
 
-        return new BambooDbContext(optionsBuilder.Options);
+        var postgresOptions = new PostgresOptions();
+        configuration.GetSection(PostgresOptions.SectionName).Bind(postgresOptions);
+
+        var optionsBuilder = new DbContextOptionsBuilder<BambooDbContext>();
+        return new BambooDbContext(
+            optionsBuilder.Options,
+            Options.Create(postgresOptions));
     }
 }

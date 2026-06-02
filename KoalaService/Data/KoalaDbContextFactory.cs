@@ -1,5 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
+using Shared.Models;
 
 namespace Tellemetry.Data;
 
@@ -7,9 +10,17 @@ public class KoalaDbContextFactory : IDesignTimeDbContextFactory<KoalaDbContext>
 {
     public KoalaDbContext CreateDbContext(string[] args)
     {
-        var optionsBuilder = new DbContextOptionsBuilder<KoalaDbContext>();
-        optionsBuilder.UseNpgsql("Host=localhost;Port=5432;Database=KoalaDb;Username=postgres;Password=admin");
+        var configuration = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json")
+            .Build();
 
-        return new KoalaDbContext(optionsBuilder.Options);
+        var postgresOptions = new PostgresOptions();
+        configuration.GetSection(PostgresOptions.SectionName).Bind(postgresOptions);
+
+        var optionsBuilder = new DbContextOptionsBuilder<KoalaDbContext>();
+        return new KoalaDbContext(
+            optionsBuilder.Options,
+            Options.Create(postgresOptions));
     }
 }

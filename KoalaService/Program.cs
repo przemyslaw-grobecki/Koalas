@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Tellemetry.Data;
 using Tellemetry.Services;
 using Tellemetry.Services.BackgroundServices;
+using Shared.Models;
 using Shared.Services;
 using Serilog;
 
@@ -24,8 +25,10 @@ try
     builder.Host.UseSerilog();
 
     // Add services to the container
-    builder.Services.AddDbContext<KoalaDbContext>(options =>
-        options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    builder.Services.Configure<PostgresOptions>(
+        builder.Configuration.GetSection(PostgresOptions.SectionName));
+
+    builder.Services.AddDbContext<KoalaDbContext>();
 
     builder.Services.AddScoped<KoalaService>();
     builder.Services.AddScoped<IKoalaController, KoalaController>();

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using BambooService.Data;
 using BambooService.Services;
 using BambooService.Services.BackgroundServices;
+using Shared.Models;
 using Shared.Services;
 using Serilog;
 
@@ -24,8 +25,10 @@ try
     builder.Host.UseSerilog();
 
     // Add services to the container
-    builder.Services.AddDbContext<BambooDbContext>(options =>
-        options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
+    builder.Services.Configure<PostgresOptions>(
+        builder.Configuration.GetSection(PostgresOptions.SectionName));
+
+    builder.Services.AddDbContext<BambooDbContext>();
 
     builder.Services.AddScoped<BambooService.Services.BambooService>();
     builder.Services.AddScoped<IBambooController, BambooController>();
