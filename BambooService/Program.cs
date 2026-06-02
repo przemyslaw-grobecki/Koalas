@@ -93,11 +93,11 @@ try
         return Results.Ok(result);
     });
 
-    app.MapPost("/api/bamboo/consume/{weight}", async (double weight, IBambooController controller) =>
+    app.MapPost("/api/bamboo/harvest/{weight}", async (double weight, IBambooController controller) =>
     {
         try
         {
-            var result = await controller.ConsumeBambooAsync(weight);
+            var result = await controller.HarvestBambooAsync(weight);
             return Results.Ok(result);
         }
         catch (InvalidOperationException ex)

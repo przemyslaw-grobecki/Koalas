@@ -28,6 +28,7 @@ try
         options.UseInMemoryDatabase("KoalaDb"));
 
     builder.Services.AddScoped<KoalaService>();
+    builder.Services.AddScoped<IKoalaController, KoalaController>();
     builder.Services.AddSingleton<IMqttService>(sp =>
         new MqttService(sp.GetRequiredService<ILogger<MqttService>>(),
                         sp.GetRequiredService<IConfiguration>(),
@@ -76,58 +77,39 @@ try
     app.MapGet("/", () => "KoalaService - Zoo Management API");
     app.MapGet("/health", () => Results.Ok("KoalaService is running"));
 
-    // Endpoints for managing koalas
-    app.MapGet("/api/koalas", async (KoalaDbContext db) =>
-        await db.Koalas.Where(k => k.IsAlive).ToListAsync());
-
-    app.MapGet("/api/koalas/{id}", async (int id, KoalaDbContext db) =>
-        await db.Koalas.FirstOrDefaultAsync(k => k.Id == id && k.IsAlive)
-            is var koala
-            ? Results.Ok(koala)
-            : Results.NotFound());
-
-    app.MapPost("/api/koalas/feed/{id}", async (int id, KoalaDbContext db) =>
+    // Endpoints for managing koalas - all using IKoalaController
+    app.MapGet("/api/koalas", async (IKoalaController controller) =>
     {
-        var koala = await db.Koalas.FirstOrDefaultAsync(k => k.Id == id && k.IsAlive);
-        if (koala == null)
-            return Results.NotFound("Koala not found or is dead");
-
-        if (koala.HungerLevel > 0)
-        {
-            koala.HungerLevel--;
-            koala.Status = koala.HungerLevel switch
-            {
-                0 => "Healthy",
-                1 or 2 => "Hungry",
-                3 or 4 => "Starving",
-                _ => "Healthy"
-            };
-            await db.SaveChangesAsync();
-            return Results.Ok(new { message = $"Koala {koala.Name} fed successfully", koala });
-        }
-
-        return Results.BadRequest("Koala is not hungry");
+        var koalas = await controller.GetAllAliveKoalasAsync();
+        return Results.Ok(koalas);
     });
 
-    app.MapGet("/api/koalas/stats", async (KoalaDbContext db) =>
+    app.MapGet("/api/koalas/{id}", async (int id, IKoalaController controller) =>
     {
-        var stats = new
+        var koala = await controller.GetAliveKoalaByIdAsync(id);
+        return koala is not null ? Results.Ok(koala) : Results.NotFound();
+    });
+
+    app.MapPost("/api/koalas/feed/{id}", async (int id, IKoalaController controller) =>
+    {
+        try
         {
-            totalAlive = await db.Koalas.CountAsync(k => k.IsAlive),
-            totalDead = await db.Koalas.CountAsync(k => !k.IsAlive),
-            totalAll = await db.Koalas.CountAsync(),
-            byStatus = await db.Koalas
-                .Where(k => k.IsAlive)
-                .GroupBy(k => k.Status)
-                .Select(g => new { status = g.Key, count = g.Count() })
-                .ToListAsync(),
-            averageAge = await db.Koalas
-                .Where(k => k.IsAlive)
-                .AverageAsync(k => k.AgeYears),
-            averageHunger = await db.Koalas
-                .Where(k => k.IsAlive)
-                .AverageAsync(k => k.HungerLevel)
-        };
+            var result = await controller.FeedKoalaAsync(id);
+            return Results.Ok(result);
+        }
+        catch (KeyNotFoundException)
+        {
+            return Results.NotFound("Koala not found or is dead");
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Results.BadRequest(ex.Message);
+        }
+    });
+
+    app.MapGet("/api/koalas/stats", async (IKoalaController controller) =>
+    {
+        var stats = await controller.GetStatsAsync();
         return Results.Ok(stats);
     });
 

@@ -22,10 +22,10 @@ public class BambooController(BambooService bambooService, ILogger<BambooControl
         return await bambooService.GetTotalWeightAsync();
     }
 
-    public async Task<object> ConsumeBambooAsync(double weight)
+    public async Task<object> HarvestBambooAsync(double weight)
     {
-        logger.LogInformation("Consuming {Weight}kg of bamboo via controller", weight);
-        return await bambooService.ConsumeBambooAsync(weight);
+        logger.LogInformation("Harvesting {Weight}kg of bamboo via controller", weight);
+        return await bambooService.HarvestBambooAsync(weight);
     }
 
     public async Task<object> GetStatsAsync()

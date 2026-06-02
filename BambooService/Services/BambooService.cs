@@ -62,9 +62,9 @@ public class BambooService(BambooDbContext dbContext, ILogger<BambooService> log
         return new { totalWeightKg = totalWeight, stalksCount = count };
     }
 
-    public async Task<object> ConsumeBambooAsync(double weight)
+    public async Task<object> HarvestBambooAsync(double weight)
     {
-        logger.LogInformation("Consuming {Weight}kg of bamboo", weight);
+        logger.LogInformation("Harvesting {Weight}kg of bamboo", weight);
         var totalWeight = await dbContext.Bamboos.SumAsync(b => b.WeightKg);
 
         if (totalWeight < weight)
